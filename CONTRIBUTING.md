@@ -1,6 +1,6 @@
 # Contributing
 
-PocketBabel is a small, frontend-only translation app. Contributions should keep the project simple, browser-first, and aligned with the product scope in [AGENTS.md](/Users/yusp/work/PocketBabel/AGENTS.md).
+PocketBabel is a small, frontend-only translation app. Contributions should keep the project simple, browser-first, and aligned with the product scope in [AGENTS.md](AGENTS.md).
 
 ## Before opening a PR
 

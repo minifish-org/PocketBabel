@@ -2,7 +2,7 @@
 
 PocketBabel is a frontend-only English/Chinese translation app built with [`@huggingface/transformers`](https://github.com/huggingface/transformers.js). It runs entirely in the browser, targets Cloudflare Pages, and is designed to keep working offline after model download.
 
-![PocketBabel UI](/Users/yusp/work/PocketBabel/docs/pocketbabel-ui.png)
+![PocketBabel UI](docs/pocketbabel-ui.png)
 
 ## Demo
 
@@ -24,7 +24,7 @@ PocketBabel is an early v1-focused project. The current product scope is intenti
 - Chinese -> English with `Xenova/opus-mt-zh-en`
 - No accounts, sync, OCR, speech, or multi-language support
 
-The detailed product guardrails live in [AGENTS.md](/Users/yusp/work/PocketBabel/AGENTS.md).
+The detailed product guardrails live in [AGENTS.md](AGENTS.md).
 
 ## Quick start
 
@@ -83,13 +83,13 @@ Production deploy:
 npm run pages:deploy:production
 ```
 
-If your Pages project name is not `pocketbabel`, update the scripts in [package.json](/Users/yusp/work/PocketBabel/package.json).
+If your Pages project name is not `pocketbabel`, update the scripts in [package.json](package.json).
 
 ### Cache behavior
 
 - Hashed files under `/assets/` are immutable
 - `index.html`, `manifest.webmanifest`, and `sw.js` are `no-cache`
-- Cache policy is defined in [public/_headers](/Users/yusp/work/PocketBabel/public/_headers)
+- Cache policy is defined in [public/_headers](public/_headers)
 
 ## Browser/runtime notes
 
@@ -99,12 +99,12 @@ If your Pages project name is not `pocketbabel`, update the scripts in [package.
 
 ## Contributing
 
-See [CONTRIBUTING.md](/Users/yusp/work/PocketBabel/CONTRIBUTING.md) before opening a pull request.
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## Security
 
-See [SECURITY.md](/Users/yusp/work/PocketBabel/SECURITY.md) for vulnerability reporting guidance.
+See [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
 
 ## License
 
-This repository is licensed under the GNU AGPL v3. See [LICENSE](/Users/yusp/work/PocketBabel/LICENSE).
+This repository is licensed under the GNU AGPL v3. See [LICENSE](LICENSE).
