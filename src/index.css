@@ -1,0 +1,38 @@
+:root {
+  font-family:
+    "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #142322;
+  background:
+    radial-gradient(circle at top, rgba(239, 122, 63, 0.12), transparent 30%),
+    linear-gradient(180deg, #f5f2ea 0%, #efe8db 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+textarea {
+  line-height: 1.55;
+}

@@ -1,0 +1,40 @@
+{
+  "name": "pocketbabel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pure frontend English/Chinese translation web app powered by transformers.js.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist --project-name pocketbabel",
+    "pages:deploy:production": "npm run build && npx wrangler pages deploy dist --project-name pocketbabel --branch main"
+  },
+  "keywords": [
+    "translation",
+    "pwa",
+    "transformers.js",
+    "cloudflare-pages"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "jsdom": "^27.0.0",
+    "playwright": "^1.58.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.1.0",
+    "vitest": "^3.2.4"
+  }
+}
