@@ -17,7 +17,7 @@
     "transformers.js",
     "cloudflare-pages"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "dependencies": {
     "@huggingface/transformers": "3.8.1",

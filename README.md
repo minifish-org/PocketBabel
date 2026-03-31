@@ -1,23 +1,39 @@
 # PocketBabel
 
-PocketBabel is a pure-frontend English/Chinese translation app built with `@huggingface/transformers`. It runs entirely in the browser, targets Cloudflare Pages, and is designed to keep working offline after model download.
+PocketBabel is a frontend-only English/Chinese translation app built with [`@huggingface/transformers`](https://github.com/huggingface/transformers.js). It runs entirely in the browser, targets Cloudflare Pages, and is designed to keep working offline after model download.
 
-## Current scope
+![PocketBabel UI](/Users/yusp/work/PocketBabel/docs/pocketbabel-ui.png)
+
+## Demo
+
+[pocketbabel.minifish.org](https://pocketbabel.minifish.org/)
+
+## Highlights
+
+- English -> Chinese and Chinese -> English only
+- No backend inference service
+- Works on desktop and mobile browsers
+- PWA shell with offline reuse after model download
+- Built for a simple, self-explanatory translation workflow
+
+## Project status
+
+PocketBabel is an early v1-focused project. The current product scope is intentionally narrow:
 
 - English -> Chinese with `Xenova/opus-mt-en-zh`
 - Chinese -> English with `Xenova/opus-mt-zh-en`
-- No backend inference service
-- PWA shell with service worker caching
-- Explicit model state, offline availability, and hard error reporting
+- No accounts, sync, OCR, speech, or multi-language support
 
-## Local development
+The detailed product guardrails live in [AGENTS.md](/Users/yusp/work/PocketBabel/AGENTS.md).
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Default Vite dev URL:
+Default local URL:
 
 ```text
 http://localhost:5173
@@ -30,9 +46,21 @@ npm test
 npm run build
 ```
 
+## How offline works
+
+1. Open the app while online.
+2. Download a direction once, or run a successful translation for that direction.
+3. Re-open the app later on the same browser profile.
+4. Use the downloaded direction offline.
+
+Expected behavior:
+
+- Downloaded directions continue to translate offline.
+- Undownloaded directions fail with a visible error instead of pretending to work.
+
 ## Deploy to Cloudflare Pages
 
-Cloudflare Pages can host this app as a plain static site. No Pages Functions or Workers are required.
+PocketBabel is a static site. It does not require Pages Functions or Workers.
 
 ### Pages dashboard settings
 
@@ -41,56 +69,42 @@ Cloudflare Pages can host this app as a plain static site. No Pages Functions or
 - Build output directory: `dist`
 - Root directory: `/`
 
-### One-time setup
-
-1. Create a Pages project named `pocketbabel` in Cloudflare.
-2. Connect the repository, or deploy with Wrangler.
-3. If using the dashboard build, keep Node/npm available in the build image.
-
 ### Deploy with Wrangler
 
-Preview-style deploy:
+Preview deploy:
 
 ```bash
 npm run pages:deploy
 ```
 
-Production deploy to the `main` branch target:
+Production deploy:
 
 ```bash
 npm run pages:deploy:production
 ```
 
-These commands use:
+If your Pages project name is not `pocketbabel`, update the scripts in [package.json](/Users/yusp/work/PocketBabel/package.json).
 
-- project name: `pocketbabel`
-- output directory: `dist`
+### Cache behavior
 
-If you choose a different Cloudflare Pages project name, update the script in [package.json](/Users/yusp/work/PocketBabel/package.json).
+- Hashed files under `/assets/` are immutable
+- `index.html`, `manifest.webmanifest`, and `sw.js` are `no-cache`
+- Cache policy is defined in [public/_headers](/Users/yusp/work/PocketBabel/public/_headers)
 
-### Caching notes
+## Browser/runtime notes
 
-- Hashed files under `/assets/` are marked immutable.
-- `index.html`, `manifest.webmanifest`, and `sw.js` are marked `no-cache`.
-- Cache policy is defined in [public/_headers](/Users/yusp/work/PocketBabel/public/_headers).
+- The first model download is relatively large
+- Browser support depends on Web Workers, IndexedDB, and Cache Storage
+- Model files are cached by browser-managed storage used by `transformers.js`, not `localStorage`
 
-## Offline validation checklist
+## Contributing
 
-1. Start online and open the app.
-2. Choose one direction.
-3. Click `Download for offline use` or perform a successful translation.
-4. Wait until the selected direction shows `Offline ready`.
-5. Turn off network in the browser or OS.
-6. Reload the page.
-7. Translate again using the same direction.
+See [CONTRIBUTING.md](/Users/yusp/work/PocketBabel/CONTRIBUTING.md) before opening a pull request.
 
-Expected result:
+## Security
 
-- The cached direction still translates.
-- An uncached direction fails with a visible error instead of silently pretending to work.
+See [SECURITY.md](/Users/yusp/work/PocketBabel/SECURITY.md) for vulnerability reporting guidance.
 
-## Notes
+## License
 
-- The first model download is large and may take time on slower networks.
-- Browser support depends on Web Workers, IndexedDB, and Cache Storage.
-- Model files are cached by browser-managed storage used by `transformers.js`, not `localStorage`.
+This repository is licensed under the GNU AGPL v3. See [LICENSE](/Users/yusp/work/PocketBabel/LICENSE).
