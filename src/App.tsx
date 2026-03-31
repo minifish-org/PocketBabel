@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { clearManagedModelCaches } from './lib/cache';
-import { getConnectivityLabel, getOfflineActionError, getRuntimeSupport } from './lib/runtime';
+import { getOfflineActionError, getRuntimeSupport } from './lib/runtime';
 import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
   createEmptyOfflineAvailability,
   getDirectionDefinition,
-  getModelStatusLabel,
   swapDirection,
   type Direction,
   type ModelStatus,
@@ -42,6 +41,7 @@ function App() {
   const [isOnline, setIsOnline] = useState(() => window.navigator.onLine);
   const [runtimeError, setRuntimeError] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [isEditingSource, setIsEditingSource] = useState(false);
 
   useEffect(() => {
     const support = getRuntimeSupport();
@@ -191,8 +191,12 @@ function App() {
   const definition = getDirectionDefinition(direction);
   const sourceCount = inputText.trim().length;
   const outputCount = outputText.trim().length;
-  const showDownloadAction = !offlineAvailability[direction];
-  const savedDirections = DIRECTIONS.filter((item) => offlineAvailability[item]);
+  const outputPlaceholder =
+    !offlineAvailability[direction] && !isOnline
+      ? 'Go online once to download this direction.'
+      : !offlineAvailability[direction]
+        ? 'First translation will download this model.'
+        : 'Translation appears here';
 
   function handleDirectionChange(nextDirection: Direction) {
     setDirection(nextDirection);
@@ -202,32 +206,11 @@ function App() {
     setProgress(0);
     setProgressLabel('');
     setCopyState('idle');
+    setIsEditingSource(false);
   }
 
   function handleSwap() {
     handleDirectionChange(swapDirection(direction));
-  }
-
-  function handleDownload() {
-    const offlineError = getOfflineActionError(offlineAvailability[direction], isOnline);
-
-    if (runtimeError) {
-      setModelStatus('error');
-      setErrorMessage(runtimeError);
-      return;
-    }
-
-    if (offlineError) {
-      setModelStatus('error');
-      setErrorMessage(offlineError);
-      return;
-    }
-
-    setOutputText('');
-    setErrorMessage('');
-    setProgress(0);
-    setProgressLabel('');
-    workerRef.current?.postMessage({ type: 'preload', direction });
   }
 
   function handleTranslate() {
@@ -304,7 +287,7 @@ function App() {
   }
 
   return (
-    <main className="shell">
+    <main className={`shell ${isEditingSource ? 'shell-editing' : ''}`}>
       <section className="app-shell">
         <header className="app-header">
           <div className="brand-block">
@@ -339,18 +322,20 @@ function App() {
         </section>
 
         <section className="status-strip" aria-label="Model status">
-          <div className="status-saved">
-            {DIRECTIONS.map((item) => (
-              <span
-                key={item}
-                className={`cache-chip ${offlineAvailability[item] ? 'cache-chip-ready' : 'cache-chip-idle'}`}
-              >
-                {item === 'en-zh' ? 'EN -> ZH' : 'ZH -> EN'}
-              </span>
-            ))}
+          <div className="status-cluster">
+            <div className="status-saved">
+              {DIRECTIONS.map((item) => (
+                <span
+                  key={item}
+                  className={`cache-chip ${offlineAvailability[item] ? 'cache-chip-ready' : 'cache-chip-idle'} ${item === direction ? 'cache-chip-current' : ''}`}
+                >
+                  {item === 'en-zh' ? 'EN -> ZH' : 'ZH -> EN'}
+                </span>
+              ))}
+            </div>
           </div>
-          <button type="button" className="text-action inline-text-action" onClick={handleClearModels} disabled={isBusy}>
-            Remove downloaded models
+          <button type="button" className="ghost-button manage-button" onClick={handleClearModels} disabled={isBusy}>
+            Clear models
           </button>
         </section>
 
@@ -381,10 +366,7 @@ function App() {
         <section className="workspace">
           <div className="editor-card">
             <div className="editor-head">
-              <div>
-                <span className="editor-label">{definition.sourceLabel}</span>
-                <strong>Input</strong>
-              </div>
+              <strong className="editor-title">{definition.sourceLabel}</strong>
               <div className="editor-actions">
                 <span className="editor-stat">{sourceCount} chars</span>
                 <button
@@ -410,16 +392,15 @@ function App() {
                 setInputText(event.target.value);
                 setCopyState('idle');
               }}
+              onFocus={() => setIsEditingSource(true)}
+              onBlur={() => setIsEditingSource(false)}
               placeholder={`Type ${definition.sourceLabel} text`}
             />
           </div>
 
           <div className="editor-card">
             <div className="editor-head">
-              <div>
-                <span className="editor-label">{definition.targetLabel}</span>
-                <strong>Output</strong>
-              </div>
+              <strong className="editor-title">{definition.targetLabel}</strong>
               <div className="editor-actions">
                 <span className="editor-stat">{outputCount} chars</span>
                 <button type="button" className="ghost-chip" onClick={handleCopyOutput} disabled={!outputText.trim()}>
@@ -432,20 +413,15 @@ function App() {
               rows={8}
               value={outputText}
               readOnly
-              placeholder="Translation appears here"
+              placeholder={outputPlaceholder}
             />
           </div>
         </section>
 
-        <section className={`actions ${showDownloadAction ? 'actions-dual' : 'actions-single'}`}>
+        <section className="actions actions-single">
           <button type="button" className="primary-action" onClick={handleTranslate} disabled={isBusy}>
             Translate
           </button>
-          {showDownloadAction && (
-            <button type="button" className="secondary-action" onClick={handleDownload} disabled={isBusy}>
-              Download for offline use
-            </button>
-          )}
         </section>
       </section>
     </main>
