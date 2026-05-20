@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
+import { translateWithOpenAICompatibleApi } from './lib/apiTranslation';
 import { clearManagedModelCaches } from './lib/cache';
 import { getOfflineActionError, getRuntimeSupport } from './lib/runtime';
+import {
+  readProviderSettings,
+  writeProviderSettings,
+  type ProviderSettings,
+} from './lib/providerSettings';
 import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
@@ -42,8 +48,20 @@ function App() {
   const [runtimeError, setRuntimeError] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isEditingSource, setIsEditingSource] = useState(false);
+  const [providerSettings, setProviderSettings] = useState<ProviderSettings>(() =>
+    readProviderSettings(),
+  );
+
+  const isApiMode = providerSettings.mode === 'api';
 
   useEffect(() => {
+    if (isApiMode) {
+      setRuntimeError('');
+      setModelStatus(providerSettings.apiKey.trim() ? 'ready' : 'not_downloaded');
+      setIsBusy(false);
+      return;
+    }
+
     const support = getRuntimeSupport();
 
     if (!support.supported) {
@@ -55,7 +73,7 @@ function App() {
     }
 
     setRuntimeError('');
-  }, []);
+  }, [isApiMode, providerSettings.apiKey]);
 
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -71,7 +89,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (runtimeError) {
+    if (isApiMode || runtimeError) {
       return;
     }
 
@@ -148,9 +166,18 @@ function App() {
 
     workerRef.current.addEventListener('message', onMessage);
     return () => workerRef.current?.removeEventListener('message', onMessage);
-  }, [direction, runtimeError]);
+  }, [direction, runtimeError, isApiMode]);
 
   useEffect(() => {
+    if (isApiMode) {
+      setProgress(0);
+      setProgressLabel('');
+      setErrorMessage('');
+      setModelStatus(providerSettings.apiKey.trim() ? 'ready' : 'not_downloaded');
+      setIsBusy(false);
+      return;
+    }
+
     if (runtimeError) {
       return;
     }
@@ -186,17 +213,29 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [direction, runtimeError]);
+  }, [direction, runtimeError, isApiMode, providerSettings.apiKey]);
 
   const definition = getDirectionDefinition(direction);
   const sourceCount = inputText.trim().length;
   const outputCount = outputText.trim().length;
   const outputPlaceholder =
-    !offlineAvailability[direction] && !isOnline
-      ? 'Go online once to download this direction.'
-      : !offlineAvailability[direction]
-        ? 'First translation will download this model.'
-        : 'Translation appears here';
+    isApiMode
+      ? 'Translation appears here'
+      : !offlineAvailability[direction] && !isOnline
+        ? 'Go online once to download this direction.'
+        : !offlineAvailability[direction]
+          ? 'First translation will download this model.'
+          : 'Translation appears here';
+
+  function updateProviderSettings(nextSettings: ProviderSettings) {
+    setProviderSettings(nextSettings);
+    writeProviderSettings(nextSettings);
+    setErrorMessage('');
+    setOutputText('');
+    setProgress(0);
+    setProgressLabel('');
+    setCopyState('idle');
+  }
 
   function handleDirectionChange(nextDirection: Direction) {
     setDirection(nextDirection);
@@ -213,11 +252,10 @@ function App() {
     handleDirectionChange(swapDirection(direction));
   }
 
-  function handleTranslate() {
+  async function handleTranslate() {
     const trimmed = inputText.trim();
-    const offlineError = getOfflineActionError(offlineAvailability[direction], isOnline);
 
-    if (runtimeError) {
+    if (!isApiMode && runtimeError) {
       setModelStatus('error');
       setErrorMessage(runtimeError);
       setOutputText('');
@@ -230,6 +268,28 @@ function App() {
       setOutputText('');
       return;
     }
+
+    if (isApiMode) {
+      setIsBusy(true);
+      setModelStatus('translating');
+      setErrorMessage('');
+      setOutputText('');
+
+      try {
+        const output = await translateWithOpenAICompatibleApi(providerSettings, direction, trimmed);
+        setOutputText(output);
+        setModelStatus('ready');
+      } catch (error) {
+        setModelStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Unknown API translation error.');
+        setOutputText('');
+      } finally {
+        setIsBusy(false);
+      }
+      return;
+    }
+
+    const offlineError = getOfflineActionError(offlineAvailability[direction], isOnline);
 
     if (offlineError) {
       setModelStatus('error');
@@ -306,7 +366,13 @@ function App() {
           >
             {'English -> Chinese'}
           </button>
-          <button className="swap-button" type="button" onClick={handleSwap} disabled={isBusy} aria-label="Swap direction">
+          <button
+            className="swap-button"
+            type="button"
+            onClick={handleSwap}
+            disabled={isBusy}
+            aria-label="Swap direction"
+          >
             ⇄
           </button>
           <button
@@ -321,8 +387,79 @@ function App() {
           </button>
         </section>
 
+        <section className="settings-panel" aria-label="Settings">
+          <div className="field-group mode-group">
+            <span className="field-label">Provider mode</span>
+            <div className="segmented-control">
+              <button
+                type="button"
+                className={`segment-button ${isApiMode ? 'segment-button-active' : ''}`}
+                aria-pressed={isApiMode}
+                onClick={() => updateProviderSettings({ ...providerSettings, mode: 'api' })}
+                disabled={isBusy}
+              >
+                API
+              </button>
+              <button
+                type="button"
+                className={`segment-button ${!isApiMode ? 'segment-button-active' : ''}`}
+                aria-pressed={!isApiMode}
+                onClick={() => updateProviderSettings({ ...providerSettings, mode: 'browser' })}
+                disabled={isBusy}
+              >
+                Browser built-in
+              </button>
+            </div>
+          </div>
+
+          <label className="field-group">
+            <span className="field-label">OpenAI Base URL</span>
+            <input
+              type="url"
+              value={providerSettings.baseUrl}
+              onChange={(event) =>
+                updateProviderSettings({ ...providerSettings, baseUrl: event.target.value })
+              }
+              disabled={isBusy}
+              spellCheck={false}
+            />
+          </label>
+
+          <label className="field-group">
+            <span className="field-label">API Key</span>
+            <input
+              type="password"
+              value={providerSettings.apiKey}
+              onChange={(event) =>
+                updateProviderSettings({ ...providerSettings, apiKey: event.target.value })
+              }
+              disabled={isBusy}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+
+          <label className="field-group">
+            <span className="field-label">Model</span>
+            <input
+              type="text"
+              value={providerSettings.model}
+              onChange={(event) =>
+                updateProviderSettings({ ...providerSettings, model: event.target.value })
+              }
+              disabled={isBusy}
+              spellCheck={false}
+            />
+          </label>
+        </section>
+
         <section className="status-strip" aria-label="Model status">
           <div className="status-cluster">
+            <span
+              className={`provider-chip ${isApiMode ? 'provider-chip-api' : 'provider-chip-browser'}`}
+            >
+              {isApiMode ? 'API provider' : 'Browser model'}
+            </span>
             <div className="status-saved">
               {DIRECTIONS.map((item) => (
                 <span
@@ -334,12 +471,17 @@ function App() {
               ))}
             </div>
           </div>
-          <button type="button" className="ghost-button manage-button" onClick={handleClearModels} disabled={isBusy}>
+          <button
+            type="button"
+            className="ghost-button manage-button"
+            onClick={handleClearModels}
+            disabled={isBusy || isApiMode}
+          >
             Clear models
           </button>
         </section>
 
-        {!runtimeError && !errorMessage && !offlineAvailability[direction] && !isOnline && (
+        {!isApiMode && !runtimeError && !errorMessage && !offlineAvailability[direction] && !isOnline && (
           <div className="inline-status" aria-live="polite">
             Go online once to download this direction.
           </div>

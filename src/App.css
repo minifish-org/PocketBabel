@@ -27,6 +27,7 @@
 
 .direction-bar,
 .status-strip,
+.settings-panel,
 .workspace,
 .actions {
   display: grid;
@@ -81,6 +82,76 @@
   color: #143d3e;
 }
 
+.settings-panel {
+  grid-template-columns: minmax(220px, 1.15fr) repeat(3, minmax(160px, 1fr));
+  align-items: end;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(18, 60, 61, 0.07);
+}
+
+.field-group {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mode-group {
+  align-self: stretch;
+}
+
+.field-label {
+  color: #6e6759;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.settings-panel input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(18, 60, 61, 0.12);
+  background: #fffdf8;
+  color: #142322;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.settings-panel input:focus {
+  outline: none;
+  border-color: rgba(20, 61, 62, 0.34);
+  box-shadow: 0 0 0 3px rgba(20, 61, 62, 0.08);
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 42px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #efe8dc;
+  border: 1px solid rgba(18, 60, 61, 0.09);
+}
+
+.segment-button {
+  min-width: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #36514f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.segment-button-active {
+  background: #1a4a4a;
+  color: #f8f3eb;
+}
+
 .status-strip {
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -101,6 +172,26 @@
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-start;
+}
+
+.provider-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.provider-chip-api {
+  background: rgba(26, 74, 74, 0.12);
+  color: #143d3e;
+}
+
+.provider-chip-browser {
+  background: rgba(239, 122, 63, 0.14);
+  color: #8a431c;
 }
 
 .cache-list {
@@ -295,6 +386,7 @@
 
 .direction-tab:hover,
 .swap-button:hover,
+.segment-button:hover,
 .ghost-chip:hover,
 .ghost-button:hover,
 .actions button:hover {
@@ -304,6 +396,7 @@
 
 .direction-tab:disabled,
 .swap-button:disabled,
+.segment-button:disabled,
 .ghost-chip:disabled,
 .ghost-button:disabled,
 .actions button:disabled {
@@ -320,12 +413,14 @@
 
   .direction-bar,
   .status-strip,
+  .settings-panel,
   .workspace,
   .actions {
     grid-template-columns: 1fr;
   }
 
   .editor-card,
+  .settings-panel,
   .inline-status,
   .progress-block,
   .error-banner {
@@ -402,8 +497,10 @@
     backdrop-filter: none;
   }
 
-  .swap-button,
   .direction-tab,
+  .swap-button,
+  .settings-panel input,
+  .segmented-control,
   .actions button {
     min-height: 48px;
   }
@@ -450,6 +547,10 @@
   .workspace {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .settings-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .editor-card {
@@ -500,6 +601,7 @@
 @media (prefers-reduced-motion: reduce) {
   .direction-tab,
   .swap-button,
+  .segment-button,
   .ghost-chip,
   .ghost-button,
   .actions button {
