@@ -54,9 +54,76 @@ describe('OpenAI-compatible API translation', () => {
     });
   });
 
+  it('accepts a base URL that already points to chat completions', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '你好' } }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateWithOpenAICompatibleApi(
+      {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        apiKey: 'test-key',
+        baseUrl: 'http://example.test/v1/chat/completions',
+      },
+      'en-zh',
+      'Hello',
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://example.test/v1/chat/completions',
+      expect.anything(),
+    );
+  });
+
+  it('accepts an origin-only base URL and inserts the OpenAI v1 path', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '你好' } }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateWithOpenAICompatibleApi(
+      {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        apiKey: 'test-key',
+        baseUrl: 'http://example.test:11435',
+      },
+      'en-zh',
+      'Hello',
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://example.test:11435/v1/chat/completions',
+      expect.anything(),
+    );
+  });
+
   it('requires an API key in API mode', async () => {
     await expect(
       translateWithOpenAICompatibleApi(DEFAULT_PROVIDER_SETTINGS, 'en-zh', 'Hello'),
     ).rejects.toThrow('API Key is required');
+  });
+
+  it('explains browser-level request failures', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(
+      translateWithOpenAICompatibleApi(
+        {
+          ...DEFAULT_PROVIDER_SETTINGS,
+          apiKey: 'test-key',
+        },
+        'en-zh',
+        'Hello',
+      ),
+    ).rejects.toThrow('allows CORS');
   });
 });

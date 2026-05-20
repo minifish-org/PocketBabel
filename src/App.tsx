@@ -48,6 +48,10 @@ function App() {
   const [runtimeError, setRuntimeError] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isEditingSource, setIsEditingSource] = useState(false);
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(
+    () => !window.matchMedia('(max-width: 900px)').matches,
+  );
   const [providerSettings, setProviderSettings] = useState<ProviderSettings>(() =>
     readProviderSettings(),
   );
@@ -387,98 +391,161 @@ function App() {
           </button>
         </section>
 
-        <section className="settings-panel" aria-label="Settings">
-          <div className="field-group mode-group">
-            <span className="field-label">Provider mode</span>
-            <div className="segmented-control">
-              <button
-                type="button"
-                className={`segment-button ${isApiMode ? 'segment-button-active' : ''}`}
-                aria-pressed={isApiMode}
-                onClick={() => updateProviderSettings({ ...providerSettings, mode: 'api' })}
-                disabled={isBusy}
-              >
-                API
-              </button>
-              <button
-                type="button"
-                className={`segment-button ${!isApiMode ? 'segment-button-active' : ''}`}
-                aria-pressed={!isApiMode}
-                onClick={() => updateProviderSettings({ ...providerSettings, mode: 'browser' })}
-                disabled={isBusy}
-              >
-                Browser built-in
-              </button>
-            </div>
-          </div>
-
-          <label className="field-group">
-            <span className="field-label">OpenAI Base URL</span>
-            <input
-              type="url"
-              value={providerSettings.baseUrl}
-              onChange={(event) =>
-                updateProviderSettings({ ...providerSettings, baseUrl: event.target.value })
-              }
-              disabled={isBusy}
-              spellCheck={false}
-            />
-          </label>
-
-          <label className="field-group">
-            <span className="field-label">API Key</span>
-            <input
-              type="password"
-              value={providerSettings.apiKey}
-              onChange={(event) =>
-                updateProviderSettings({ ...providerSettings, apiKey: event.target.value })
-              }
-              disabled={isBusy}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
-
-          <label className="field-group">
-            <span className="field-label">Model</span>
-            <input
-              type="text"
-              value={providerSettings.model}
-              onChange={(event) =>
-                updateProviderSettings({ ...providerSettings, model: event.target.value })
-              }
-              disabled={isBusy}
-              spellCheck={false}
-            />
-          </label>
-        </section>
-
-        <section className="status-strip" aria-label="Model status">
-          <div className="status-cluster">
-            <span
-              className={`provider-chip ${isApiMode ? 'provider-chip-api' : 'provider-chip-browser'}`}
-            >
-              {isApiMode ? 'API provider' : 'Browser model'}
-            </span>
-            <div className="status-saved">
-              {DIRECTIONS.map((item) => (
-                <span
-                  key={item}
-                  className={`cache-chip ${offlineAvailability[item] ? 'cache-chip-ready' : 'cache-chip-idle'} ${item === direction ? 'cache-chip-current' : ''}`}
-                >
-                  {item === 'en-zh' ? 'EN -> ZH' : 'ZH -> EN'}
-                </span>
-              ))}
-            </div>
-          </div>
+        <section className="settings-card" aria-label="Settings">
           <button
             type="button"
-            className="ghost-button manage-button"
-            onClick={handleClearModels}
-            disabled={isBusy || isApiMode}
+            className="settings-toggle"
+            onClick={() => setIsSettingsOpen((current) => !current)}
+            aria-expanded={isSettingsOpen}
+            aria-controls="provider-settings"
           >
-            Clear models
+            <span>Settings</span>
+            <span className="settings-summary">
+              {isApiMode ? `API · ${providerSettings.model || 'No model'}` : 'Browser built-in'}
+            </span>
           </button>
+
+          {isSettingsOpen && (
+            <div
+              id="provider-settings"
+              className={`settings-panel ${isApiMode ? 'settings-panel-api' : 'settings-panel-browser'}`}
+            >
+              <div className="field-group mode-group">
+                <span className="field-label">Provider mode</span>
+                <div className="segmented-control">
+                  <button
+                    type="button"
+                    className={`segment-button ${isApiMode ? 'segment-button-active' : ''}`}
+                    aria-pressed={isApiMode}
+                    onClick={() => updateProviderSettings({ ...providerSettings, mode: 'api' })}
+                    disabled={isBusy}
+                  >
+                    API
+                  </button>
+                  <button
+                    type="button"
+                    className={`segment-button ${!isApiMode ? 'segment-button-active' : ''}`}
+                    aria-pressed={!isApiMode}
+                    onClick={() => updateProviderSettings({ ...providerSettings, mode: 'browser' })}
+                    disabled={isBusy}
+                  >
+                    Browser built-in
+                  </button>
+                </div>
+              </div>
+
+              {isApiMode ? (
+                <>
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="openai-base-url">
+                      OpenAI Base URL
+                    </label>
+                    <input
+                      id="openai-base-url"
+                      type="url"
+                      value={providerSettings.baseUrl}
+                      onChange={(event) =>
+                        updateProviderSettings({ ...providerSettings, baseUrl: event.target.value })
+                      }
+                      disabled={isBusy}
+                      spellCheck={false}
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="api-key">
+                      API Key
+                    </label>
+                    <div className="api-key-control">
+                      <input
+                        id="api-key"
+                        type={isApiKeyVisible ? 'text' : 'password'}
+                        value={providerSettings.apiKey}
+                        onChange={(event) =>
+                          updateProviderSettings({ ...providerSettings, apiKey: event.target.value })
+                        }
+                        disabled={isBusy}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                      <button
+                        type="button"
+                        className="api-key-toggle"
+                        onClick={() => setIsApiKeyVisible((current) => !current)}
+                        disabled={isBusy}
+                        aria-label={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+                      >
+                        {isApiKeyVisible ? (
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        ) : (
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M10.7 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.2 4.2" />
+                            <path d="M14.1 14.1A3 3 0 0 1 9.9 9.9" />
+                            <path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 5.4-1.6" />
+                            <path d="m2 2 20 20" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="api-model">
+                      Model
+                    </label>
+                    <input
+                      id="api-model"
+                      type="text"
+                      value={providerSettings.model}
+                      onChange={(event) =>
+                        updateProviderSettings({ ...providerSettings, model: event.target.value })
+                      }
+                      disabled={isBusy}
+                      spellCheck={false}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {DIRECTIONS.map((item) => (
+                    <span
+                      key={item}
+                      className={`settings-cache-chip cache-chip ${offlineAvailability[item] ? 'cache-chip-ready' : 'cache-chip-idle'} ${item === direction ? 'cache-chip-current' : ''}`}
+                    >
+                      {item === 'en-zh' ? 'EN -> ZH' : 'ZH -> EN'}
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    className="ghost-button manage-button settings-clear-button"
+                    onClick={handleClearModels}
+                    disabled={isBusy}
+                  >
+                    Clear models
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </section>
 
         {!isApiMode && !runtimeError && !errorMessage && !offlineAvailability[direction] && !isOnline && (

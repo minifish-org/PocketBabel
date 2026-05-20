@@ -26,7 +26,7 @@ describe('provider settings', () => {
   it('defaults to OpenAI-compatible API mode', () => {
     expect(DEFAULT_PROVIDER_SETTINGS).toEqual({
       mode: 'api',
-      baseUrl: 'http://100.100.89.60:11435/v1',
+      baseUrl: 'http://localhost:11435',
       apiKey: '',
       model: 'standard/chat',
     });
@@ -44,6 +44,21 @@ describe('provider settings', () => {
       ...DEFAULT_PROVIDER_SETTINGS,
       model: 'custom/model',
     });
+  });
+
+  it('migrates the old IP-based defaults to the generic example URL', () => {
+    expect(
+      normalizeProviderSettings({
+        ...DEFAULT_PROVIDER_SETTINGS,
+        baseUrl: 'http://100.100.89.60:11435/v1',
+      }).baseUrl,
+    ).toBe('http://localhost:11435');
+    expect(
+      normalizeProviderSettings({
+        ...DEFAULT_PROVIDER_SETTINGS,
+        baseUrl: 'http://100.100.89.60:11435',
+      }).baseUrl,
+    ).toBe('http://localhost:11435');
   });
 
   it('persists settings in localStorage-compatible storage', () => {

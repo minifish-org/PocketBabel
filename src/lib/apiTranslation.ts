@@ -13,7 +13,17 @@ interface ChatCompletionResponse {
 }
 
 function buildChatCompletionsUrl(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+
+  if (normalizedBaseUrl.endsWith('/chat/completions')) {
+    return normalizedBaseUrl;
+  }
+
+  if (!normalizedBaseUrl.endsWith('/v1')) {
+    return `${normalizedBaseUrl}/v1/chat/completions`;
+  }
+
+  return `${normalizedBaseUrl}/chat/completions`;
 }
 
 function extractMessageContent(response: ChatCompletionResponse): string {
@@ -56,26 +66,38 @@ export async function translateWithOpenAICompatibleApi(
   }
 
   const definition = getDirectionDefinition(direction);
-  const response = await fetch(buildChatCompletionsUrl(baseUrl), {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: `Translate from ${definition.sourceLabel} to ${definition.targetLabel}. Return only the translated text.`,
-        },
-        {
-          role: 'user',
-          content: text,
-        },
-      ],
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(buildChatCompletionsUrl(baseUrl), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: `Translate from ${definition.sourceLabel} to ${definition.targetLabel}. Return only the translated text.`,
+          },
+          {
+            role: 'user',
+            content: text,
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof TypeError
+        ? 'API request could not reach the server. Check that the endpoint is reachable from this browser and that it allows CORS for Authorization and Content-Type headers.'
+        : error instanceof Error
+          ? error.message
+          : 'API request failed before receiving a response.',
+    );
+  }
 
   let payload: ChatCompletionResponse | undefined;
 

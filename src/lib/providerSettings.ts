@@ -9,9 +9,14 @@ export interface ProviderSettings {
   model: string;
 }
 
+const LEGACY_DEFAULT_BASE_URLS = [
+  'http://100.100.89.60:11435',
+  'http://100.100.89.60:11435/v1',
+];
+
 export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   mode: 'api',
-  baseUrl: 'http://100.100.89.60:11435/v1',
+  baseUrl: 'http://localhost:11435',
   apiKey: '',
   model: 'standard/chat',
 };
@@ -28,13 +33,15 @@ export function normalizeProviderSettings(value: unknown): ProviderSettings {
   }
 
   const candidate = value as Partial<Record<keyof ProviderSettings, unknown>>;
+  const savedBaseUrl = typeof candidate.baseUrl === 'string' ? candidate.baseUrl.trim() : '';
+  const baseUrl =
+    savedBaseUrl && !LEGACY_DEFAULT_BASE_URLS.includes(savedBaseUrl)
+      ? savedBaseUrl
+      : DEFAULT_PROVIDER_SETTINGS.baseUrl;
 
   return {
     mode: isProviderMode(candidate.mode) ? candidate.mode : DEFAULT_PROVIDER_SETTINGS.mode,
-    baseUrl:
-      typeof candidate.baseUrl === 'string' && candidate.baseUrl.trim()
-        ? candidate.baseUrl.trim()
-        : DEFAULT_PROVIDER_SETTINGS.baseUrl,
+    baseUrl,
     apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : DEFAULT_PROVIDER_SETTINGS.apiKey,
     model:
       typeof candidate.model === 'string' && candidate.model.trim()
