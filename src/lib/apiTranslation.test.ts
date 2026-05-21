@@ -33,6 +33,7 @@ describe('OpenAI-compatible API translation', () => {
       'http://example.test/v1/chat/completions',
       expect.objectContaining({
         method: 'POST',
+        targetAddressSpace: 'local',
         headers: {
           Authorization: 'Bearer test-key',
           'Content-Type': 'application/json',

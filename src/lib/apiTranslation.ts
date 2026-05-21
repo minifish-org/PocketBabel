@@ -12,6 +12,8 @@ interface ChatCompletionResponse {
   };
 }
 
+type LocalNetworkRequestInit = RequestInit & { targetAddressSpace?: 'local' };
+
 function buildChatCompletionsUrl(baseUrl: string): string {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
 
@@ -66,29 +68,31 @@ export async function translateWithOpenAICompatibleApi(
   }
 
   const definition = getDirectionDefinition(direction);
+  const requestInit: LocalNetworkRequestInit = {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: `Translate from ${definition.sourceLabel} to ${definition.targetLabel}. Return only the translated text.`,
+        },
+        {
+          role: 'user',
+          content: text,
+        },
+      ],
+    }),
+    targetAddressSpace: 'local',
+  };
   let response: Response;
 
   try {
-    response = await fetch(buildChatCompletionsUrl(baseUrl), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: `Translate from ${definition.sourceLabel} to ${definition.targetLabel}. Return only the translated text.`,
-          },
-          {
-            role: 'user',
-            content: text,
-          },
-        ],
-      }),
-    });
+    response = await fetch(buildChatCompletionsUrl(baseUrl), requestInit);
   } catch (error) {
     throw new Error(
       error instanceof TypeError
