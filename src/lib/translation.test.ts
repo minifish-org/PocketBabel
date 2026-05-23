@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createEmptyOfflineAvailability,
+  getDirectionChangeTextState,
   getDirectionDefinition,
   getModelStatusLabel,
   swapDirection,
@@ -15,6 +16,24 @@ describe('translation config', () => {
   it('swaps directions explicitly', () => {
     expect(swapDirection('en-zh')).toBe('zh-en');
     expect(swapDirection('zh-en')).toBe('en-zh');
+  });
+
+  it('preserves source text when changing direction without translated text', () => {
+    expect(getDirectionChangeTextState('hello', '')).toEqual({
+      sourceText: 'hello',
+      translatedText: '',
+    });
+    expect(getDirectionChangeTextState('hello', '   ')).toEqual({
+      sourceText: 'hello',
+      translatedText: '',
+    });
+  });
+
+  it('swaps source and translated text when changing direction with translated text', () => {
+    expect(getDirectionChangeTextState('hello', '你好')).toEqual({
+      sourceText: '你好',
+      translatedText: 'hello',
+    });
   });
 
   it('starts with no offline models marked ready', () => {

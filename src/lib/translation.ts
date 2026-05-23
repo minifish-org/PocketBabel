@@ -51,6 +51,23 @@ export function swapDirection(direction: Direction): Direction {
   return direction === 'en-zh' ? 'zh-en' : 'en-zh';
 }
 
+export function getDirectionChangeTextState(
+  sourceText: string,
+  translatedText: string,
+): { sourceText: string; translatedText: string } {
+  if (translatedText.trim()) {
+    return {
+      sourceText: translatedText,
+      translatedText: sourceText,
+    };
+  }
+
+  return {
+    sourceText,
+    translatedText: '',
+  };
+}
+
 export function createEmptyOfflineAvailability(): OfflineAvailability {
   return {
     'en-zh': false,

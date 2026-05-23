@@ -12,6 +12,7 @@ import {
   DEFAULT_DIRECTION,
   DIRECTIONS,
   createEmptyOfflineAvailability,
+  getDirectionChangeTextState,
   getDirectionDefinition,
   swapDirection,
   type Direction,
@@ -242,9 +243,15 @@ function App() {
   }
 
   function handleDirectionChange(nextDirection: Direction) {
+    if (nextDirection === direction) {
+      return;
+    }
+
+    const nextTextState = getDirectionChangeTextState(inputText, outputText);
+
     setDirection(nextDirection);
-    setInputText(getDirectionDefinition(nextDirection).sampleInput);
-    setOutputText('');
+    setInputText(nextTextState.sourceText);
+    setOutputText(nextTextState.translatedText);
     setErrorMessage('');
     setProgress(0);
     setProgressLabel('');
@@ -578,19 +585,6 @@ function App() {
               <strong className="editor-title">{definition.sourceLabel}</strong>
               <div className="editor-actions">
                 <span className="editor-stat">{sourceCount} chars</span>
-                <button
-                  type="button"
-                  className="ghost-chip"
-                  onClick={() => {
-                    setInputText(definition.sampleInput);
-                    setOutputText('');
-                    setErrorMessage('');
-                    setCopyState('idle');
-                  }}
-                  disabled={isBusy}
-                >
-                  Sample
-                </button>
               </div>
             </div>
             <textarea
