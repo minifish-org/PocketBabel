@@ -46,6 +46,17 @@ function extractMessageContent(response: ChatCompletionResponse): string {
   return '';
 }
 
+function buildTranslationSystemPrompt(direction: Direction): string {
+  const definition = getDirectionDefinition(direction);
+
+  return [
+    'You are a professional translator.',
+    `Translate the user's text from ${definition.sourceLabel} to ${definition.targetLabel}.`,
+    'Return only the translated text. Do not explain, annotate, quote, or add alternatives.',
+    'Preserve line breaks and formatting where reasonable.',
+  ].join(' ');
+}
+
 export async function translateWithOpenAICompatibleApi(
   settings: ProviderSettings,
   direction: Direction,
@@ -67,7 +78,6 @@ export async function translateWithOpenAICompatibleApi(
     throw new Error('Model is required for API provider mode.');
   }
 
-  const definition = getDirectionDefinition(direction);
   const requestInit: LocalNetworkRequestInit = {
     method: 'POST',
     headers: {
@@ -79,7 +89,7 @@ export async function translateWithOpenAICompatibleApi(
       messages: [
         {
           role: 'system',
-          content: `Translate from ${definition.sourceLabel} to ${definition.targetLabel}. Return only the translated text.`,
+          content: buildTranslationSystemPrompt(direction),
         },
         {
           role: 'user',

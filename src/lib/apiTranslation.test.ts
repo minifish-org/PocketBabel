@@ -45,7 +45,8 @@ describe('OpenAI-compatible API translation', () => {
       messages: [
         {
           role: 'system',
-          content: 'Translate from English to Chinese. Return only the translated text.',
+          content:
+            "You are a professional translator. Translate the user's text from English to Chinese. Return only the translated text. Do not explain, annotate, quote, or add alternatives. Preserve line breaks and formatting where reasonable.",
         },
         {
           role: 'user',

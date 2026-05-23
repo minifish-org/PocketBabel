@@ -33,11 +33,10 @@ type WorkerMessage =
   | { status: 'translated'; direction: Direction; output: string }
   | { status: 'error'; direction: Direction; message: string };
 
-const initialText = getDirectionDefinition(DEFAULT_DIRECTION).sampleInput;
 function App() {
   const workerRef = useRef<Worker | null>(null);
   const [direction, setDirection] = useState<Direction>(DEFAULT_DIRECTION);
-  const [inputText, setInputText] = useState(initialText);
+  const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
   const [modelStatus, setModelStatus] = useState<ModelStatus>('checking');
   const [progress, setProgress] = useState(0);
@@ -597,7 +596,7 @@ function App() {
               }}
               onFocus={() => setIsEditingSource(true)}
               onBlur={() => setIsEditingSource(false)}
-              placeholder={`Type ${definition.sourceLabel} text`}
+              placeholder={definition.sampleInput}
             />
           </div>
 
