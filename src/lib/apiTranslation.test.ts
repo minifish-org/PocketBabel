@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { translateWithOpenAICompatibleApi } from './apiTranslation';
+import { shouldUseDictionaryPrompt, translateWithOpenAICompatibleApi } from './apiTranslation';
 import { DEFAULT_PROVIDER_SETTINGS } from './providerSettings';
 
 describe('OpenAI-compatible API translation', () => {
@@ -25,7 +25,7 @@ describe('OpenAI-compatible API translation', () => {
         model: 'custom/chat',
       },
       'en-zh',
-      'Hello',
+      'Hello world from PocketBabel.',
     );
 
     expect(output).toBe('你好');
@@ -50,10 +50,71 @@ describe('OpenAI-compatible API translation', () => {
         },
         {
           role: 'user',
-          content: 'Hello',
+          content: 'Hello world from PocketBabel.',
         },
       ],
     });
+  });
+
+  it('uses a dictionary prompt for English words and short phrases', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: 'respect\n[noun] 尊重；方面' } }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateWithOpenAICompatibleApi(
+      {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        apiKey: 'test-key',
+      },
+      'en-zh',
+      'respect',
+    );
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+
+    expect(payload.messages[0].content).toContain('concise bilingual dictionary');
+    expect(payload.messages[0].content).toContain('dictionary-style entry in Chinese');
+  });
+
+  it('uses a dictionary prompt for short Chinese terms', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '尊重\n[noun] respect' } }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await translateWithOpenAICompatibleApi(
+      {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        apiKey: 'test-key',
+      },
+      'zh-en',
+      '尊重',
+    );
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+
+    expect(payload.messages[0].content).toContain('concise bilingual dictionary');
+    expect(payload.messages[0].content).toContain('dictionary-style entry in English');
+  });
+
+  it('detects dictionary inputs conservatively', () => {
+    expect(shouldUseDictionaryPrompt('respect', 'en-zh')).toBe(true);
+    expect(shouldUseDictionaryPrompt('in respect of', 'en-zh')).toBe(true);
+    expect(shouldUseDictionaryPrompt('I respect your choice', 'en-zh')).toBe(false);
+    expect(shouldUseDictionaryPrompt('I respect your choice.', 'en-zh')).toBe(false);
+    expect(shouldUseDictionaryPrompt('尊重', 'zh-en')).toBe(true);
+    expect(shouldUseDictionaryPrompt('我尊重你', 'zh-en')).toBe(false);
+    expect(shouldUseDictionaryPrompt('我尊重你的选择', 'zh-en')).toBe(false);
+    expect(shouldUseDictionaryPrompt('我尊重你的选择。', 'zh-en')).toBe(false);
   });
 
   it('accepts a base URL that already points to chat completions', async () => {

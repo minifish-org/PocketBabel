@@ -14,6 +14,26 @@ interface ChatCompletionResponse {
 
 type LocalNetworkRequestInit = RequestInit & { targetAddressSpace?: 'local' };
 
+const ENGLISH_SENTENCE_MARKER_WORDS = new Set([
+  'i',
+  'you',
+  'he',
+  'she',
+  'it',
+  'we',
+  'they',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'our',
+  'their',
+]);
+
 function buildChatCompletionsUrl(baseUrl: string): string {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
 
@@ -46,6 +66,41 @@ function extractMessageContent(response: ChatCompletionResponse): string {
   return '';
 }
 
+function countCjkCharacters(text: string): number {
+  return text.match(/[\u3400-\u9fff]/g)?.length ?? 0;
+}
+
+export function shouldUseDictionaryPrompt(text: string, direction: Direction): boolean {
+  const trimmed = text.trim();
+
+  if (!trimmed || /[\n.!?。！？；;]/.test(trimmed)) {
+    return false;
+  }
+
+  if (direction === 'en-zh') {
+    const words = trimmed.match(/[A-Za-z]+(?:['-][A-Za-z]+)*/g) ?? [];
+    const latinWords = words.length;
+    const latinCharacters = trimmed.match(/[A-Za-z]/g)?.length ?? 0;
+    const nonSpacingCharacters = trimmed.replace(/\s/g, '').length;
+
+    return (
+      latinWords >= 1 &&
+      latinWords <= 4 &&
+      latinCharacters / nonSpacingCharacters >= 0.7 &&
+      !words.some((word) => ENGLISH_SENTENCE_MARKER_WORDS.has(word.toLowerCase()))
+    );
+  }
+
+  const cjkCharacters = countCjkCharacters(trimmed);
+
+  return (
+    cjkCharacters >= 1 &&
+    cjkCharacters <= 6 &&
+    cjkCharacters === trimmed.replace(/\s/g, '').length &&
+    !/[我你您他她它咱]/.test(trimmed)
+  );
+}
+
 function buildTranslationSystemPrompt(direction: Direction): string {
   const definition = getDirectionDefinition(direction);
 
@@ -55,6 +110,45 @@ function buildTranslationSystemPrompt(direction: Direction): string {
     'Return only the translated text. Do not explain, annotate, quote, or add alternatives.',
     'Preserve line breaks and formatting where reasonable.',
   ].join(' ');
+}
+
+function buildDictionarySystemPrompt(direction: Direction): string {
+  const definition = getDirectionDefinition(direction);
+
+  if (direction === 'en-zh') {
+    return [
+      'You are a concise bilingual dictionary.',
+      `The user's input is an English word or short phrase, so provide a compact dictionary-style entry in Chinese.`,
+      'Return only the dictionary entry. Do not add introductions or extra commentary.',
+      'Format:',
+      '<word or phrase>',
+      '[part of speech] <primary Chinese meanings>',
+      'Usage: <brief Chinese usage note>',
+      'Examples:',
+      '1. <English example>（<Chinese translation>）',
+      '2. <English example>（<Chinese translation>）',
+    ].join('\n');
+  }
+
+  return [
+    'You are a concise bilingual dictionary.',
+    `The user's input is a Chinese word or short phrase, so provide a compact dictionary-style entry in English.`,
+    'Return only the dictionary entry. Do not add introductions or extra commentary.',
+    'Format:',
+    '<word or phrase>',
+    '[part of speech] <primary English meanings>',
+    'Usage: <brief English usage note>',
+    'Examples:',
+    '1. <Chinese example> (<English translation>)',
+    '2. <Chinese example> (<English translation>)',
+    `The source language is ${definition.sourceLabel}; the target language is ${definition.targetLabel}.`,
+  ].join('\n');
+}
+
+function buildSystemPrompt(direction: Direction, text: string): string {
+  return shouldUseDictionaryPrompt(text, direction)
+    ? buildDictionarySystemPrompt(direction)
+    : buildTranslationSystemPrompt(direction);
 }
 
 export async function translateWithOpenAICompatibleApi(
@@ -89,7 +183,7 @@ export async function translateWithOpenAICompatibleApi(
       messages: [
         {
           role: 'system',
-          content: buildTranslationSystemPrompt(direction),
+          content: buildSystemPrompt(direction, text),
         },
         {
           role: 'user',
