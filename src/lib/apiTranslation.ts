@@ -102,13 +102,20 @@ export function shouldUseDictionaryPrompt(text: string, direction: Direction): b
 }
 
 function buildTranslationSystemPrompt(direction: Direction): string {
-  const definition = getDirectionDefinition(direction);
+  if (direction === 'en-zh') {
+    return [
+      'You are a professional English-to-Chinese translator.',
+      "Translate the user's text into natural, fluent Chinese.",
+      'Preserve the original meaning, tone, intent, and formatting where reasonable.',
+      'Return only the translated text. Do not include explanations, annotations, quotes, alternatives, or the original text.',
+    ].join(' ');
+  }
 
   return [
-    'You are a professional translator.',
-    `Translate the user's text from ${definition.sourceLabel} to ${definition.targetLabel}.`,
-    'Return only the translated text. Do not explain, annotate, quote, or add alternatives.',
-    'Preserve line breaks and formatting where reasonable.',
+    'You are a professional Chinese-to-English translator.',
+    "Translate the user's text into natural, idiomatic English.",
+    'Preserve the original meaning, tone, intent, and formatting where reasonable.',
+    'Return only the translated text. Do not include explanations, annotations, quotes, alternatives, or the original text.',
   ].join(' ');
 }
 
@@ -117,30 +124,44 @@ function buildDictionarySystemPrompt(direction: Direction): string {
 
   if (direction === 'en-zh') {
     return [
-      'You are a concise bilingual dictionary.',
-      `The user's input is an English word or short phrase, so provide a compact dictionary-style entry in Chinese.`,
-      'Return only the dictionary entry. Do not add introductions or extra commentary.',
+      'You are a bilingual dictionary and usage guide.',
+      "The user's input is an English word or short phrase. Explain it in Chinese with enough detail for practical use.",
+      'Return only the dictionary entry. Do not add introductions.',
       'Format:',
       '<word or phrase>',
-      '[part of speech] <primary Chinese meanings>',
-      'Usage: <brief Chinese usage note>',
+      'Pronunciation: <IPA if useful>',
+      'Parts of speech and meanings:',
+      '- [part of speech] <Chinese meaning>; <brief usage note>',
+      '- [part of speech] <Chinese meaning>; <brief usage note>',
+      'Common phrases:',
+      '- <phrase>: <Chinese meaning / usage>',
+      'Usage notes:',
+      '- <important nuance, register, or common mistake>',
       'Examples:',
       '1. <English example>（<Chinese translation>）',
       '2. <English example>（<Chinese translation>）',
+      '3. <English example>（<Chinese translation>）',
     ].join('\n');
   }
 
   return [
-    'You are a concise bilingual dictionary.',
-    `The user's input is a Chinese word or short phrase, so provide a compact dictionary-style entry in English.`,
-    'Return only the dictionary entry. Do not add introductions or extra commentary.',
+    'You are a bilingual dictionary and usage guide.',
+    "The user's input is a Chinese word or short phrase. Explain it in English with enough detail for practical use.",
+    'Return only the dictionary entry. Do not add introductions.',
     'Format:',
     '<word or phrase>',
-    '[part of speech] <primary English meanings>',
-    'Usage: <brief English usage note>',
+    'Pinyin: <pinyin if useful>',
+    'Parts of speech and meanings:',
+    '- [part of speech] <English meaning>; <brief usage note>',
+    '- [part of speech] <English meaning>; <brief usage note>',
+    'Common phrases:',
+    '- <phrase>: <English meaning / usage>',
+    'Usage notes:',
+    '- <important nuance, register, or common mistake>',
     'Examples:',
     '1. <Chinese example> (<English translation>)',
     '2. <Chinese example> (<English translation>)',
+    '3. <Chinese example> (<English translation>)',
     `The source language is ${definition.sourceLabel}; the target language is ${definition.targetLabel}.`,
   ].join('\n');
 }

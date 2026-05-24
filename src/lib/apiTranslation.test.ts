@@ -46,7 +46,7 @@ describe('OpenAI-compatible API translation', () => {
         {
           role: 'system',
           content:
-            "You are a professional translator. Translate the user's text from English to Chinese. Return only the translated text. Do not explain, annotate, quote, or add alternatives. Preserve line breaks and formatting where reasonable.",
+            "You are a professional English-to-Chinese translator. Translate the user's text into natural, fluent Chinese. Preserve the original meaning, tone, intent, and formatting where reasonable. Return only the translated text. Do not include explanations, annotations, quotes, alternatives, or the original text.",
         },
         {
           role: 'user',
@@ -77,8 +77,9 @@ describe('OpenAI-compatible API translation', () => {
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
 
-    expect(payload.messages[0].content).toContain('concise bilingual dictionary');
-    expect(payload.messages[0].content).toContain('dictionary-style entry in Chinese');
+    expect(payload.messages[0].content).toContain('bilingual dictionary and usage guide');
+    expect(payload.messages[0].content).toContain('Explain it in Chinese with enough detail');
+    expect(payload.messages[0].content).toContain('Common phrases');
   });
 
   it('uses a dictionary prompt for short Chinese terms', async () => {
@@ -102,8 +103,9 @@ describe('OpenAI-compatible API translation', () => {
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
 
-    expect(payload.messages[0].content).toContain('concise bilingual dictionary');
-    expect(payload.messages[0].content).toContain('dictionary-style entry in English');
+    expect(payload.messages[0].content).toContain('bilingual dictionary and usage guide');
+    expect(payload.messages[0].content).toContain('Explain it in English with enough detail');
+    expect(payload.messages[0].content).toContain('Usage notes');
   });
 
   it('detects dictionary inputs conservatively', () => {
