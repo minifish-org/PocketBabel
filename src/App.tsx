@@ -47,6 +47,9 @@ function App() {
   const [isOnline, setIsOnline] = useState(() => window.navigator.onLine);
   const [runtimeError, setRuntimeError] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechSupported =
+    typeof window !== 'undefined' && 'speechSynthesis' in window;
   const [isEditingSource, setIsEditingSource] = useState(false);
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(
@@ -356,6 +359,42 @@ function App() {
     }
   }
 
+  useEffect(() => {
+    if (!speechSupported) {
+      return;
+    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [outputText, direction, speechSupported]);
+
+  function handleSpeakOutput() {
+    if (!speechSupported) {
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const text = outputText.trim();
+    if (!text) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = direction === 'en-zh' ? 'zh-CN' : 'en-US';
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
   return (
     <main className={`shell ${isEditingSource ? 'shell-editing' : ''}`}>
       <section className="app-shell">
@@ -605,6 +644,16 @@ function App() {
               <strong className="editor-title">{definition.targetLabel}</strong>
               <div className="editor-actions">
                 <span className="editor-stat">{outputCount} chars</span>
+                {speechSupported && (
+                  <button
+                    type="button"
+                    className="ghost-chip"
+                    onClick={handleSpeakOutput}
+                    disabled={!outputText.trim()}
+                  >
+                    {isSpeaking ? 'Stop' : 'Speak'}
+                  </button>
+                )}
                 <button type="button" className="ghost-chip" onClick={handleCopyOutput} disabled={!outputText.trim()}>
                   {copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Copy failed' : 'Copy'}
                 </button>
