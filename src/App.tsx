@@ -265,6 +265,24 @@ function App() {
     handleDirectionChange(swapDirection(direction));
   }
 
+  function handleDirectionKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (isBusy) {
+      return;
+    }
+    const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+    const vertical = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+    if (!horizontal && !vertical) {
+      return;
+    }
+    event.preventDefault();
+    const next = swapDirection(direction);
+    handleDirectionChange(next);
+    const selector = next === 'en-zh' ? 'first-of-type' : 'last-of-type';
+    event.currentTarget
+      .querySelector<HTMLButtonElement>(`.direction-tab:${selector}`)
+      ?.focus();
+  }
+
   async function handleTranslate() {
     const trimmed = inputText.trim();
 
@@ -404,11 +422,17 @@ function App() {
           </div>
         </header>
 
-        <section className="direction-bar" aria-label="Translation direction">
+        <section
+          className="direction-bar"
+          role="tablist"
+          aria-label="Translation direction"
+          onKeyDown={handleDirectionKeyDown}
+        >
           <button
             type="button"
             role="tab"
             aria-selected={direction === 'en-zh'}
+            tabIndex={direction === 'en-zh' ? 0 : -1}
             className={`direction-tab ${direction === 'en-zh' ? 'direction-tab-active' : ''}`}
             onClick={() => handleDirectionChange('en-zh')}
             disabled={isBusy}
@@ -428,6 +452,7 @@ function App() {
             type="button"
             role="tab"
             aria-selected={direction === 'zh-en'}
+            tabIndex={direction === 'zh-en' ? 0 : -1}
             className={`direction-tab ${direction === 'zh-en' ? 'direction-tab-active' : ''}`}
             onClick={() => handleDirectionChange('zh-en')}
             disabled={isBusy}

@@ -394,10 +394,6 @@
   margin-top: 2px;
 }
 
-.actions-dual {
-  grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.3fr);
-}
-
 .actions-single {
   grid-template-columns: minmax(240px, 360px);
 }
@@ -412,11 +408,6 @@
   background: #1a4747;
   color: #f8f3eb;
   border-color: #1a4747;
-}
-
-.secondary-action {
-  background: #e9f0ea;
-  color: #143d3e;
 }
 
 .direction-tab:hover,
