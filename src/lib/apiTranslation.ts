@@ -186,11 +186,11 @@ export async function translateWithOpenAICompatibleApi(
   }
 
   if (!apiKey) {
-    throw new Error('API Key is required for API provider mode.');
+    throw new Error('API Key is required for API translation.');
   }
 
   if (!model) {
-    throw new Error('Model is required for API provider mode.');
+    throw new Error('Model is required for API translation.');
   }
 
   const requestInit: LocalNetworkRequestInit = {

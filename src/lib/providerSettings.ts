@@ -1,9 +1,4 @@
-export const PROVIDER_MODES = ['api', 'browser'] as const;
-
-export type ProviderMode = (typeof PROVIDER_MODES)[number];
-
 export interface ProviderSettings {
-  mode: ProviderMode;
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -16,7 +11,6 @@ const LEGACY_DEFAULT_BASE_URLS = [
 ];
 
 export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
-  mode: 'api',
   baseUrl: 'http://localhost:11435',
   apiKey: '',
   model: 'standard/chat',
@@ -24,10 +18,6 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
 };
 
 export const PROVIDER_SETTINGS_STORAGE_KEY = 'pocketbabel.providerSettings';
-
-function isProviderMode(value: unknown): value is ProviderMode {
-  return value === 'api' || value === 'browser';
-}
 
 export function normalizeProviderSettings(value: unknown): ProviderSettings {
   if (!value || typeof value !== 'object') {
@@ -42,7 +32,6 @@ export function normalizeProviderSettings(value: unknown): ProviderSettings {
       : DEFAULT_PROVIDER_SETTINGS.baseUrl;
 
   return {
-    mode: isProviderMode(candidate.mode) ? candidate.mode : DEFAULT_PROVIDER_SETTINGS.mode,
     baseUrl,
     apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : DEFAULT_PROVIDER_SETTINGS.apiKey,
     model:

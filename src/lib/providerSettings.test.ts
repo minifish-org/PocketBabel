@@ -25,7 +25,6 @@ function createMemoryStorage(): Storage {
 describe('provider settings', () => {
   it('defaults to OpenAI-compatible API mode', () => {
     expect(DEFAULT_PROVIDER_SETTINGS).toEqual({
-      mode: 'api',
       baseUrl: 'http://localhost:11435',
       apiKey: '',
       model: 'standard/chat',
@@ -36,7 +35,7 @@ describe('provider settings', () => {
   it('normalizes missing or invalid saved values', () => {
     expect(
       normalizeProviderSettings({
-        mode: 'invalid',
+        mode: 'browser',
         baseUrl: '',
         apiKey: 123,
         model: 'custom/model',
@@ -67,7 +66,6 @@ describe('provider settings', () => {
   it('persists settings in localStorage-compatible storage', () => {
     const storage = createMemoryStorage();
     const settings = {
-      mode: 'browser' as const,
       baseUrl: 'http://localhost:11434/v1',
       apiKey: 'secret',
       model: 'local/chat',
@@ -79,5 +77,22 @@ describe('provider settings', () => {
     expect(storage.getItem(PROVIDER_SETTINGS_STORAGE_KEY)).toContain('local/chat');
     expect(storage.getItem(PROVIDER_SETTINGS_STORAGE_KEY)).toContain('local/tts-voice-design');
     expect(readProviderSettings(storage)).toEqual(settings);
+  });
+
+  it('drops legacy provider mode values from saved settings', () => {
+    expect(
+      normalizeProviderSettings({
+        mode: 'browser',
+        baseUrl: 'http://localhost:11434/v1',
+        apiKey: 'secret',
+        model: 'local/chat',
+        ttsModel: 'local/tts-voice-design',
+      }),
+    ).toEqual({
+      baseUrl: 'http://localhost:11434/v1',
+      apiKey: 'secret',
+      model: 'local/chat',
+      ttsModel: 'local/tts-voice-design',
+    });
   });
 });
