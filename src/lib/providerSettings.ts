@@ -7,6 +7,7 @@ export interface ProviderSettings {
   baseUrl: string;
   apiKey: string;
   model: string;
+  ttsModel: string;
 }
 
 const LEGACY_DEFAULT_BASE_URLS = [
@@ -19,6 +20,7 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   baseUrl: 'http://localhost:11435',
   apiKey: '',
   model: 'standard/chat',
+  ttsModel: 'local/tts',
 };
 
 export const PROVIDER_SETTINGS_STORAGE_KEY = 'pocketbabel.providerSettings';
@@ -47,6 +49,10 @@ export function normalizeProviderSettings(value: unknown): ProviderSettings {
       typeof candidate.model === 'string' && candidate.model.trim()
         ? candidate.model.trim()
         : DEFAULT_PROVIDER_SETTINGS.model,
+    ttsModel:
+      typeof candidate.ttsModel === 'string' && candidate.ttsModel.trim()
+        ? candidate.ttsModel.trim()
+        : DEFAULT_PROVIDER_SETTINGS.ttsModel,
   };
 }
 

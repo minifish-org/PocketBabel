@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
+import { requestOpenAICompatibleSpeech } from './lib/apiSpeech';
 import { translateWithOpenAICompatibleApi } from './lib/apiTranslation';
 import { clearManagedModelCaches } from './lib/cache';
 import { getOfflineActionError, getRuntimeSupport } from './lib/runtime';
@@ -35,6 +36,9 @@ type WorkerMessage =
 
 function App() {
   const workerRef = useRef<Worker | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioObjectUrlRef = useRef<string | null>(null);
+  const speechRequestIdRef = useRef(0);
   const [direction, setDirection] = useState<Direction>(DEFAULT_DIRECTION);
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
@@ -50,6 +54,11 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const speechSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const apiSpeechSupported =
+    typeof window !== 'undefined' &&
+    'Audio' in window &&
+    'URL' in window &&
+    typeof window.URL.createObjectURL === 'function';
   const [isEditingSource, setIsEditingSource] = useState(false);
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(
@@ -60,6 +69,7 @@ function App() {
   );
 
   const isApiMode = providerSettings.mode === 'api';
+  const canSpeakOutput = speechSupported || (isApiMode && apiSpeechSupported);
 
   useEffect(() => {
     if (isApiMode) {
@@ -235,6 +245,7 @@ function App() {
           : 'Translation appears here';
 
   function updateProviderSettings(nextSettings: ProviderSettings) {
+    cancelSpeechPlayback();
     setProviderSettings(nextSettings);
     writeProviderSettings(nextSettings);
     setErrorMessage('');
@@ -377,25 +388,127 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    if (!speechSupported) {
+  function isCurrentSpeechRequest(requestId: number) {
+    return speechRequestIdRef.current === requestId;
+  }
+
+  function clearApiSpeechAudio() {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audioRef.current = null;
+    }
+
+    if (audioObjectUrlRef.current) {
+      window.URL.revokeObjectURL(audioObjectUrlRef.current);
+      audioObjectUrlRef.current = null;
+    }
+  }
+
+  function cancelSpeechPlayback() {
+    speechRequestIdRef.current += 1;
+    if (speechSupported) {
+      window.speechSynthesis.cancel();
+    }
+    clearApiSpeechAudio();
+    setIsSpeaking(false);
+  }
+
+  function describeSpeechError(error: unknown) {
+    return error instanceof Error ? error.message : 'Unknown API TTS error.';
+  }
+
+  function startBrowserSpeech(text: string, requestId: number) {
+    if (!isCurrentSpeechRequest(requestId)) {
       return;
     }
+
+    clearApiSpeechAudio();
+
+    if (!speechSupported || typeof SpeechSynthesisUtterance === 'undefined') {
+      setIsSpeaking(false);
+      setErrorMessage('Browser built-in speech is unavailable in this browser.');
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-    return () => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = direction === 'en-zh' ? 'zh-CN' : 'en-US';
+    utterance.onend = () => {
+      if (isCurrentSpeechRequest(requestId)) {
+        setIsSpeaking(false);
+      }
+    };
+    utterance.onerror = () => {
+      if (isCurrentSpeechRequest(requestId)) {
+        setIsSpeaking(false);
+        setErrorMessage('Browser built-in speech failed.');
+      }
+    };
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function playApiSpeechAudio(audioBlob: Blob, text: string, requestId: number) {
+    if (!isCurrentSpeechRequest(requestId)) {
+      return;
+    }
+
+    clearApiSpeechAudio();
+    if (speechSupported) {
       window.speechSynthesis.cancel();
+    }
+
+    const objectUrl = window.URL.createObjectURL(audioBlob);
+    const audio = new window.Audio(objectUrl);
+    audioObjectUrlRef.current = objectUrl;
+    audioRef.current = audio;
+    audio.onended = () => {
+      if (isCurrentSpeechRequest(requestId)) {
+        clearApiSpeechAudio();
+        setIsSpeaking(false);
+      }
+    };
+    audio.onerror = () => {
+      if (!isCurrentSpeechRequest(requestId)) {
+        return;
+      }
+
+      clearApiSpeechAudio();
+      if (speechSupported) {
+        setErrorMessage('API TTS audio playback failed. Falling back to browser built-in speech.');
+        startBrowserSpeech(text, requestId);
+      } else {
+        setIsSpeaking(false);
+        setErrorMessage('API TTS audio playback failed. Browser speech fallback is unavailable.');
+      }
+    };
+
+    try {
+      setIsSpeaking(true);
+      await audio.play();
+    } catch {
+      clearApiSpeechAudio();
+      throw new Error('API TTS audio playback failed.');
+    }
+  }
+
+  useEffect(() => {
+    cancelSpeechPlayback();
+    return () => {
+      cancelSpeechPlayback();
     };
   }, [outputText, direction, speechSupported]);
 
-  function handleSpeakOutput() {
-    if (!speechSupported) {
+  async function handleSpeakOutput() {
+    if (!canSpeakOutput) {
       return;
     }
 
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+      cancelSpeechPlayback();
       return;
     }
 
@@ -404,13 +517,35 @@ function App() {
       return;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = direction === 'en-zh' ? 'zh-CN' : 'en-US';
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    const requestId = speechRequestIdRef.current + 1;
+    speechRequestIdRef.current = requestId;
     setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+    setErrorMessage('');
+
+    if (isApiMode && apiSpeechSupported) {
+      try {
+        const audio = await requestOpenAICompatibleSpeech(providerSettings, direction, text);
+        await playApiSpeechAudio(audio, text, requestId);
+        return;
+      } catch (error) {
+        if (!isCurrentSpeechRequest(requestId)) {
+          return;
+        }
+
+        clearApiSpeechAudio();
+        const message = describeSpeechError(error);
+        if (speechSupported) {
+          setErrorMessage(`API TTS failed: ${message} Falling back to browser built-in speech.`);
+          startBrowserSpeech(text, requestId);
+        } else {
+          setIsSpeaking(false);
+          setErrorMessage(`API TTS failed: ${message} Browser speech fallback is unavailable.`);
+        }
+        return;
+      }
+    }
+
+    startBrowserSpeech(text, requestId);
   }
 
   return (
@@ -471,7 +606,9 @@ function App() {
           >
             <span>Settings</span>
             <span className="settings-summary">
-              {isApiMode ? `API · ${providerSettings.model || 'No model'}` : 'Browser built-in'}
+              {isApiMode
+                ? `API · ${providerSettings.model || 'No model'} · TTS ${providerSettings.ttsModel || 'No TTS model'}`
+                : 'Browser built-in'}
             </span>
           </button>
 
@@ -593,6 +730,22 @@ function App() {
                       spellCheck={false}
                     />
                   </div>
+
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="api-tts-model">
+                      TTS Model
+                    </label>
+                    <input
+                      id="api-tts-model"
+                      type="text"
+                      value={providerSettings.ttsModel}
+                      onChange={(event) =>
+                        updateProviderSettings({ ...providerSettings, ttsModel: event.target.value })
+                      }
+                      disabled={isBusy}
+                      spellCheck={false}
+                    />
+                  </div>
                 </>
               ) : (
                 <>
@@ -669,7 +822,7 @@ function App() {
               <strong className="editor-title">{definition.targetLabel}</strong>
               <div className="editor-actions">
                 <span className="editor-stat">{outputCount} chars</span>
-                {speechSupported && (
+                {canSpeakOutput && (
                   <button
                     type="button"
                     className="ghost-chip"

@@ -29,6 +29,7 @@ describe('provider settings', () => {
       baseUrl: 'http://localhost:11435',
       apiKey: '',
       model: 'standard/chat',
+      ttsModel: 'local/tts',
     });
   });
 
@@ -39,10 +40,12 @@ describe('provider settings', () => {
         baseUrl: '',
         apiKey: 123,
         model: 'custom/model',
+        ttsModel: 'local/tts-quality',
       }),
     ).toEqual({
       ...DEFAULT_PROVIDER_SETTINGS,
       model: 'custom/model',
+      ttsModel: 'local/tts-quality',
     });
   });
 
@@ -68,11 +71,13 @@ describe('provider settings', () => {
       baseUrl: 'http://localhost:11434/v1',
       apiKey: 'secret',
       model: 'local/chat',
+      ttsModel: 'local/tts-voice-design',
     };
 
     writeProviderSettings(settings, storage);
 
     expect(storage.getItem(PROVIDER_SETTINGS_STORAGE_KEY)).toContain('local/chat');
+    expect(storage.getItem(PROVIDER_SETTINGS_STORAGE_KEY)).toContain('local/tts-voice-design');
     expect(readProviderSettings(storage)).toEqual(settings);
   });
 });
